@@ -1,0 +1,262 @@
+"""
+@PRIORITY : P0
+
+@MICROSERVICE: EAGLE, EXCALIBUR, GERSHWIN
+
+@NAME: sars_policy_profile_deploy_set2.py
+
+@AUTHOR: pokoushi@cisco.com
+
+@TAGS: GUI, STAGING, REG, SARS, APPLIANCE, CRR
+
+@TEST_PLAN: GUI Mini Regression
+
+@TIMS_ID: Tst13046181c
+
+@Description:
+Creates and verifies policies and server-profile configuration
+
+@PROCEDURE:
+1. create user and role. 
+1. create custom organzation with one resource group.
+2. create policy with custom organzation and verify the configuration in the policy details page.
+3. create a profile with custom org (dont attach any policy , only create )
+4. Editing the profile and attach policy creating inline policy and attach it.
+5. Deploy the profile and verify if the server profile deployment is successful, by checking workflow status
+
+@Pass/Fail Criteria
+1. Able to create policies from GUI and verify the configuration set for the created policies
+2. Able to create server Profile from GUI successfully and verify the request workflow status (Success)
+
+@SUPPORT_ALIAS: qali-dev@cisco.com
+Copyright (c) 2023, Cisco Systems, Inc.
+"""
+# pylint: disable=protected-access,eval-used,unused-variable, pointless-statement, line-too-long, invalid-name, too-many-branches, undefined-variable, too-many-statements, too-many-lines
+
+from qali.intersight.gui.model import IntersightGui
+from qali.test.test import TestError, TestFail
+import parameter as params
+import sys
+import traceback
+import time
+from copy import deepcopy
+import utilLib as utils
+
+
+def test_setup():
+    """
+    Test setup
+    """
+    try:
+        params.gui = IntersightGui(url=params.host, username=params.adminusername,
+                                   password=params.adminpassword, account_name=params.accountName,
+                                   account_role='Account Administrator', )
+
+    except Exception as exc:
+        runtests_logger.info(f"Login was unsuccessful...{exc}")
+        raise TestError("Login Failed")
+
+    params.gui.page.navigate_to("Targets")
+    params.profiles = []
+    params.policies = []
+    # fetch targets details according to IP address taken from rackdb
+    target = params.gui.page.get_target(f"IP Address: {params.sarsIp}")
+    timeStr = time.strftime("%m%d_%H%M")
+    if target:
+        params.serverName = target["Name"]
+        params.serverIP = target["IP Address"]
+        params.profileName = f"{params.prefix}-{params.serverName.lower()}-{timeStr}"
+        params.serverProfileConfig4["name"] = params.profileName
+        params.serverProfileConfig4["server_serial"] = params.serverSerial[0]
+        params.serverProfileConfig4['server_power_state'] = params.serverPowerState
+    else:
+        raise TestFail("Failed to fetch target details")
+
+    timeStr = time.strftime("%m%d_%H%M")
+    params.rgName = "rg_tc4" + '_' + timeStr
+    params.org1Name = "org1_tc4" + '_' + timeStr
+    params.localRGConfig = deepcopy(params.resourceGroupConfig)
+    params.localUsageOrgConfig = deepcopy(params.orgConfig)
+
+
+def run_test():
+    """
+    Run test
+    """
+    runtests_logger.subdebug(
+        "sars_policy_profile_deploy--: Creation resource group and regular organization --NOT RUN")
+    runtests_logger.subdebug(
+        "sars_policy_profile_deploy--: Creation of custom organization--NOT RUN")
+
+    # Creation of resource group
+    try:
+        runtests_logger.info(f'Creating a resource group: {params.rgName}')
+        params.gui.page.navigate_to(
+            "Settings").select_setting('Resource Groups')
+        params.localRGConfig['name'] = params.rgName
+        params.localRGConfig['description'] = 'Only SARS'
+        params.localRGConfig["targets"] = [params.serverName]
+        params.gui.page.create(params.localRGConfig)
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--: Creation resource group and regular organization --PASS")
+
+    except Exception as excep:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_policy_profile_deploy is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"failed due to exception : {excep}")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--: Creation resource group and regular organization --FAIL")
+    try:
+        # create an regular org which is mapping to RG
+        runtests_logger.info(
+            "Creating another regular Org with resource group{}".format(params.org1Name))
+        params.gui.page.navigate_to("Settings").select_setting('Organizations')
+        params.localUsageOrgConfig["name"] = params.org1Name
+        params.localUsageOrgConfig["rgs_orgs_select"] = [params.rgName]
+        params.gui.page.create(params.localUsageOrgConfig)
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--: Creation of custom organization--PASS")
+
+    except Exception as exceptionMsg:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_policy_profile_deploy is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"failed due to exception : {exceptionMsg}")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--: Creation of custom organization--FAIL")
+
+    params.ncpConfig['organization'] = params.org1Name
+    params.biosConfig['organization'] = params.org1Name
+    params.serverProfileConfig4["organization"] = params.org1Name
+
+    runtests_logger.subdebug(
+        "sars_policy_profile_deploy--SARS Policy Creation with custom org--NOT RUN")
+    runtests_logger.subdebug(
+        "sars_policy_profile_deploy-- Server Profile creation with custom org--NOT RUN")
+    runtests_logger.subdebug(
+        "sars_policy_profile_deploy-- SARS Profile deployment after edited the policies--NOTRUN")
+
+    try:
+        params.gui.page.navigate_to("Policies")
+        # Network Connectivity policy
+        runtests_logger.info("Creating Network connectivity policy")
+        params.gui.page.create_policy(
+            "Network Connectivity").create(params.ncpConfig)
+        runtests_logger.info(
+            "Successfully created network connectivity policy\n")
+        params.policies.append(params.ncpConfig["name"])
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--SARS Policy Creation with custom org--PASS")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_policy_profile_deploy is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Server Profile Template creation failed {exe}")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy--SARS Policy Creation with custom org--FAIL")
+
+    try:
+        # navigate to Profiles page
+        params.gui.page.navigate_to("Profiles").create_profile(
+            "UCS Server Profiles").create(params.serverProfileConfig4)
+        runtests_logger.info("Successfully created server profile")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy-- Server Profile creation with custom org--PASS")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_policy_profile_deploy is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Server Profile creation failed {exe}")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy-- Server Profile creation with custom org--FAIL")
+
+    params.serverProfileConfig4['bios_policy'] = params.biosConfig
+    params.serverProfileConfig4['network_connectivity_policy'] = params.ncpConfig['name']
+    profileType = "UCS Server Profiles"
+    # check if we have existing profile
+    profileName = utils.getServerData(params.gui, params.serverProfileConfig4['server_serial'])[
+        0]['Server Profile']
+    if profileName:
+        # Unassign if we have existing profile
+        params.gui.page.navigate_to("Profiles").unassign_profile(
+            profileType, f"Name:{profileName}")
+
+        # wait for unassign profile to complete
+        if utils.checkUnassignProfileStatus(params.gui, profileType, f"Name:{profileName}"):
+            runtests_logger.info(
+                f"Profile {profileName} unassign from server, proceed with test")
+        else:
+            raise TestFail(
+                f"Profile {profileName} still assigned to server, cannot proceed with test")
+
+    try:
+        params.serverProfileConfig4edit['bios_policy'] = params.biosConfig
+        params.serverProfileConfig4edit['network_connectivity_policy'] = params.ncpConfig['name']
+        params.serverProfileConfig4edit["server_serial"] = params.serverProfileConfig4["server_serial"]
+        runtests_logger.info("Editing and assign the server profile")
+        params.gui.page.navigate_to("Profiles").edit_profile("UCS Server Profiles",
+                                                             f"Name: eq '{params.serverProfileConfig4['name']}'").edit(params.serverProfileConfig4edit)
+        runtests_logger.info(
+            "Successfully assigned policies to server profile")
+        params.profiles.append(params.profileName)
+        params.policies.append(params.biosConfig["name"])
+        params.policies.append(params.ncpConfig["name"])
+
+        runtests_logger.info("Deploying the server profile")
+        params.gui.page.deploy_profile(profile_type="UCS Server Profiles",
+                                                    filter_str=f"Name: eq '{params.profileName}'")
+        requestWorkflowStatus = params.gui.page._verify_deployment_request_status(
+            name='Deploy Server Profile', source_name=params.profileName, target_name=params.serverName)
+
+        if requestWorkflowStatus == "Success":
+            runtests_logger.info("Successfully deployed the server profile")
+            runtests_logger.subdebug(
+                "sars_policy_profile_deploy-- SARS Profile deployment after edited the policies--PASS")
+        else:
+            runtests_logger.info(
+                f"Deploy server profile failed:deploy sp wf status is {requestWorkflowStatus}, Expected:Success")
+            runtests_logger.info("Profile deployment failed")
+            runtests_logger.subdebug(
+                "sars_policy_profile_deploy-- SARS Profile deployment after edited the policies--FAIL")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_policy_profile_deploy is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Server Profile deployment failed {exe}")
+        runtests_logger.info(
+            f"SARS Profile creation and deployment failed {exe}")
+        runtests_logger.subdebug(
+            "sars_policy_profile_deploy-- SARS Profile deployment after edited the policies--FAIL")
+
+
+def test_cleanup():
+    """
+    Test cleanup -
+    """
+    # delete profile
+    utils.delete_profile(params.gui, runtests_logger, params.profiles)
+
+    # delete policies
+    params.gui.page.navigate_to("Policies")
+    params.gui.page.delete_policy(params.ncpConfig['name'])
+    params.gui.page.delete_policy(params.biosConfig['name'])
+
+    if params.sharedOrg:
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(params.org1Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error(
+                "Error in deleting org 1 : {0}".format(exceptionMsg))
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(
+                params.resourceGroupConfig)
+        except Exception as exceptionMsg:
+            runtests_logger.error(
+                "Error in deleting org 2 : {0}".format(exceptionMsg))
+
+    if params.gui:
+        params.gui.quit()

@@ -1,0 +1,270 @@
+"""
+@PRIORITY : P0
+
+@MICROSERVICE: DEJAVU, ALPHA, OMEGA, EAGLE, GERSHWIN
+
+@NAME: sars_fw_policy_upgrade_set2.py
+
+@AUTHOR: nagsivak@cisco.com
+
+@TAGS: GUI, STAGING, REG, SARS, APPLIANCE, CRR
+
+@TIMS_ID: Tst13046175c
+
+@TEST_PLAN: GUI Mini Regression
+
+@Description:
+Creates and verifies policies and server-profile configuration
+
+@PROCEDURE:
+1. Create policies and verify the configuration in the policy details page
+2. Create server profile with config specified.
+3. Deploy the profile and verify if the server profile deployment is successful, by checking workflow status.
+4. Edit the policies
+5. Re-Deploy the profile and verify if the server profile deployment is successful, by checking workflow status.
+
+@Pass/Fail Criteria
+1. Able to create policies from GUI and verify the configuration set for the created policies
+2. Able to create/delete server Profile from GUI successfully and verify the request workflow status (Success)
+3. Verify the server profile activation status (Success)
+4. Able to Edit the policies from GUI
+5. Able to re-deploy the server Profile from GUI successfully and verify the request workflow status (Success)
+
+
+@SUPPORT_ALIAS: qali-dev@cisco.com
+Copyright (c) 2023, Cisco Systems, Inc.
+"""
+# pylint: disable=protected-access, line-too-long
+from qali.intersight.gui.model import IntersightGui
+from qali.test.test import TestFail, TestError
+import parameter as params
+import time
+import sys
+import traceback
+import utilLib as utils
+
+
+def test_setup():
+    """
+    Test setup
+    """
+    try:
+        params.gui = IntersightGui(url=params.host, username=params.adminusername,
+                                   password=params.adminpassword, account_name=params.accountName,
+                                   account_role='Account Administrator', )
+
+    except Exception as exc:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("login failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Login was unsuccessful...{exc}")
+        raise TestError("Login Failed")
+
+    params.gui.page.navigate_to("Targets")
+    params.profiles = []
+    params.policies = []
+    # fetch targets details according to IP address taken from rackdb
+    target = params.gui.page.get_target(f"IP Address: {params.sarsIp}")
+    timeStr = time.strftime("%m%d_%H%M")
+    if target:
+        params.serverName = target["Name"]
+        params.serverIP = target["IP Address"]
+        params.profileName = f"{params.prefix}-{params.serverName.lower()}-{timeStr}"
+        params.serverProfileConfig3["name"] = params.profileName
+        params.serverProfileConfig3["server_serial"] = params.serverSerial[0]
+        params.serverProfileConfig3['server_power_state'] = params.serverPowerState
+    else:
+        raise TestFail("Failed to fetch target details")
+
+
+def run_test():
+    """
+    Run test
+    """
+    runtests_logger.subdebug(
+        "sars_fw_policy_upgrade--TC1: SARS Policy Fw Creation--NOTRUN")
+    runtests_logger.subdebug(
+        "sars_fw_policy_upgrade--TC2: Profile creation and assignment with Firmware policy--NOTRUN")
+    runtests_logger.subdebug(
+        "sars_fw_policy_upgrade--TC3: Profile Deployment with Firmware policy--NOTRUN")
+    runtests_logger.subdebug(
+        "sars_edit_policy_profile_redeploy_fw--TC4: SARS Edit Policies--NOTRUN")
+    runtests_logger.subdebug(
+        "sars_edit_policy_profile_redeploy_fw--TC5: SARS Profile Re-deployment after edited the policies--NOTRUN")
+    # Policy creation
+    try:
+        # navigate to policies page
+        params.gui.page.navigate_to("Policies")
+
+        # SMTP policy
+        runtests_logger.info("Creating SMTP policy")
+        params.gui.page.create_policy("SMTP").create(params.smtpConfig)
+        runtests_logger.info("Successfully SMTP policy\n")
+
+        # SNMP Policy
+        runtests_logger.info("Creating SNMP Policy")
+        params.gui.page.create_policy("SNMP").create(params.snmpConfig)
+        params.policies.append(params.snmpConfig["name"])
+        runtests_logger.info("Successfully SNMP Policy\n")
+
+        # Syslog policy
+        runtests_logger.info("Creating Syslog policy")
+        params.gui.page.create_policy("Syslog").create(params.syslogConfig)
+        runtests_logger.info("Successfully Syslog policy")
+
+        # Storage policy
+        runtests_logger.info("Creating Storage policy")
+        params.gui.page.create_policy("Storage").create(params.storagepolicyConfig)
+        params.policies.append(params.storagepolicyConfig["name"])
+        runtests_logger.info("Successfully created Storage policy\n")
+
+        # Firmware policy
+        # runtests_logger.info("Creating firmware policy")
+        # params.gui.page.create_policy("Firmware").create(params.firmwareConfig)
+        # params.policies.append(params.firmwareConfig["name"])
+        # runtests_logger.info("Successfully created firmware policy\n")
+
+        runtests_logger.subdebug(
+            "sars_fw_policy_upgrade--TC1: SARS Policy Fw Creation--PASS")
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_fw_policy_upgrade failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Policy creation failed {exe}")
+        runtests_logger.subdebug(
+            "sars_fw_policy_upgrade--TC1: SARS Policy Fw Creation--FAIL")
+
+    # Profile creation
+    try:
+        runtests_logger.info("Create and assign the server profile")
+
+        params.gui.page.navigate_to("Profiles").create_profile(
+            "UCS Server Profiles").create(params.serverProfileConfig3)
+        params.profiles.append(params.profileName)
+
+        runtests_logger.info(
+            "Successfully assigned policies to server profile")
+        runtests_logger.subdebug(
+            "sars_fw_policy_upgrade--TC2: Profile creation and assignment with Firmware policy--PASS")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_fw_policy_upgrade failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(
+            f"Profile creation and assignment with Firmware policy failed {exe}")
+        runtests_logger.subdebug(
+            "sars_fw_policy_upgrade--TC2: Profile creation and assignment with Firmware policy--FAIL")
+
+    # Verify deploy server profile and server profile activation wf status
+    try:
+        time.sleep(20)
+        requestWorkflowStatus = params.gui.page._verify_deployment_request_status(
+            name='Deploy Server Profile', source_name=params.profileName, target_name=params.serverName)
+
+        time.sleep(60)
+        if requestWorkflowStatus == "Success":
+            serverProfileActivationStatus = params.gui.page._verify_deployment_request_status(
+                name='Deploy Server Profile', source_name=params.profileName, target_name=params.serverName)
+
+            if serverProfileActivationStatus == "Success":
+                runtests_logger.info(
+                    "Successfully deployed the server profile with Firmware policy")
+                runtests_logger.subdebug(
+                    "sars_fw_policy_upgrade--TC3: Profile Deployment with Firmware policy--PASS")
+            else:
+                runtests_logger.subdebug(
+                    "sars_fw_policy_upgrade--TC3: Profile Deployment with Firmware policy--FAIL")
+                raise TestFail(
+                    f"Firmware Upgrade with firmware policy failed : server profile activation workflow status is {serverProfileActivationStatus}, Expected : Success")
+        else:
+            runtests_logger.subdebug(
+                "sars_fw_policy_upgrade--TC3: Profile Deployment with Firmware policy--FAIL")
+            raise TestFail(
+                f"Firmware Upgrade with firmware policy failed : deploy server profile wf status is {requestWorkflowStatus}, Expected : Success")
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_fw_policy_upgrade failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.subdebug(
+            "sars_fw_policy_upgrade--TC3: Profile Deployment with Firmware policy--FAIL")
+        raise TestFail(f"Profile deployment with Firmware policy failed {exe}")
+
+    # Edit Policy
+    try:
+        # navigate to policies page
+        params.gui.page.navigate_to("Policies")
+
+        # SMTP policy
+        runtests_logger.info("Editing SMTP policy")
+        params.gui.page.edit_policy(
+            name=params.smtpConfig['name']).edit(params.smtpConfigEdit)
+        # params.gui.click_ctx('Save').click()
+        params.policies.append(params.smtpConfigEdit["name"])
+        runtests_logger.info("Successfully edited SMTP policy\n")
+
+        # Syslog policy
+        runtests_logger.info("Editing Syslog policy")
+        params.gui.page.edit_policy(
+            name=params.syslogConfig['name']).edit(params.syslogConfigEdit)
+        params.policies.append(params.syslogConfigEdit["name"])
+        runtests_logger.info("Successfully edited Syslog policy")
+
+        runtests_logger.subdebug(
+            "sars_edit_policy_profile_redeploy_fw--TC4: SARS Edit Policies--PASS")
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_fw_policy_upgrade failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Policy creation failed {exe}")
+        runtests_logger.subdebug(
+            "sars_edit_policy_profile_redeploy_fw--TC4: SARS Edit Policies--FAIL")
+
+    # Re-Profile deployment
+    try:
+        time.sleep(20)
+        runtests_logger.info("Re-deploying the server profile")
+        params.gui.page.navigate_to("Profiles")
+        params.gui.page.deploy_profile(profile_type="UCS Server Profiles",
+                                       filter_str=f"Name: eq '{params.profileName}'")
+
+        # Verifying Server profile deployment workflow
+        requestWorkflowStatus = params.gui.page._verify_deployment_request_status(
+            name='Deploy Server Profile', source_name=params.profileName, target_name=params.serverName)
+
+        if requestWorkflowStatus == "Success":
+            runtests_logger.info(
+                "Successfully re-deployed the server profile after edited the policies")
+            runtests_logger.subdebug(
+                "sars_edit_policy_profile_redeploy_fw--TC5: SARS Profile Re-deployment after edited the policies--PASS")
+        else:
+            runtests_logger.info(
+                f"Deploy server profile failed: deploy server profile wf status is {requestWorkflowStatus}, Expected : Success")
+            runtests_logger.info("SARS Profile Re-deployment failed")
+            runtests_logger.subdebug(
+                "sars_edit_policy_profile_redeploy_fw--TC5: SARS Profile Re-deployment after edited the policies--FAIL")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_fw_policy_upgrade failed".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"SARS Profile Re-deployment failed {exe}")
+        runtests_logger.subdebug("sars_edit_policy_profile_redeploy_fw--TC5:"
+                                 "SARS Profile Re-deployment after edited the policies--FAIL")
+
+
+def test_cleanup():
+    """
+    Test cleanup -
+    """
+    # delete profile
+    utils.delete_profile(params.gui, runtests_logger, params.profiles)
+
+    # delete policies
+    if params.policies:
+        params.gui.page.navigate_to("Policies")
+        for policy in params.policies:
+            params.gui.page.delete_policy(policy)
+
+    if params.gui:
+        params.gui.quit()

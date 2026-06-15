@@ -1,0 +1,452 @@
+"""
+@PRIORITY : P0
+
+@MICROSERVICE: EAGLE, EXCALIBUR, GERSHWIN, AN-EXCALIBUR, AN-GERSHWIN
+
+@NAME: sars_server_shared_orgs_template_set2.py
+
+@AUTHOR: nagsivak@cisco.com
+
+@TAGS: GUI, STAGING, REG, SARS, APPLIANCE, CRR
+
+@TEST_PLAN: GUI Mini Regression
+
+@TIMS_ID: Tst13046184c
+
+@Description:
+Creates and verifies policies
+
+@PROCEDURE:
+1. Create policies and verify the configuration in the polciy details page
+2. Edit the policies
+3. Re-Deploy the profile and verify if the server profile deployment is successful, by checking workflow status.
+
+@Pass/Fail Criteria
+1. Able to create policies from GUI and verify the configuration set for the created policies
+2. Able to Edit the policies from GUI
+3. Able to re-deploy the server Profile from GUI successfully and verify the request workflow status (Success)
+
+@SUPPORT_ALIAS: qali-dev@cisco.com
+Copyright (c) 2023, Cisco Systems, Inc.
+"""
+
+# pylint: disable=protected-access, line-too-long, no-member
+
+from qali.intersight.gui.model import IntersightGui
+from qali.test.test import TestError, TestFail
+import parameter as params
+import sys
+import traceback
+import time
+from copy import deepcopy
+import utilLib as utils
+
+
+def test_setup():
+    """
+    Test setup
+    """
+    try:
+        params.gui = IntersightGui(url=params.host, username=params.adminusername,
+                                   password=params.adminpassword, account_name=params.accountName,
+                                   account_role='Account Administrator', )
+
+    except Exception as exc:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("login failed".join(traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Login was unsuccessful...{exc}")
+        raise TestError("Login Failed")
+
+    timeStr = time.strftime("%m%d_%H%M")
+    params.rgName = "rg_tc4" + '_' + timeStr
+    params.perm1Name = "perm1_tc4" + '_' + timeStr
+    params.org1Name = "org1_tc4" + '_' + timeStr
+    params.org2Name = "org2_tc4" + '_' + timeStr
+    params.org3Name = "org3_tc4" + '_' + timeStr
+    params.org4Name = "org4_tc4" + '_' + timeStr
+    params.org8Name = "org8_tc4" + '_' + timeStr
+    params.localRGConfig = deepcopy(params.resourceGroupConfig)
+    params.localUsageOrgConfig = deepcopy(params.orgConfig)
+    params.localRoleConfig = deepcopy(params.roleConfig)
+    params.localUserConfigPol = deepcopy(params.localUserConfig)
+    params.virtualMediaConfigPol = deepcopy(params.virtualMediaConfig)
+    params.ldapConfigPol = deepcopy(params.ldapConfig)
+    params.deviceConnectorConfigPol = deepcopy(params.deviceConnectorConfig)
+    params.serverProfileConfig2Prof = deepcopy(params.serverProfileConfig2)
+
+    params.gui.page.navigate_to("Targets")
+    params.profiles = []
+    params.policies = []
+    # fetch targets details according to IP address taken from rackdb
+    target = params.gui.page.get_target(f"IP Address: {params.sarsIp}")
+    if target:
+        params.serverName = target["Name"]
+        params.serverIP = target["IP Address"]
+        params.profileName = f"{params.prefix}-{params.serverName.lower()}-{timeStr}"
+        params.serverProfileConfig2Prof["name"] = params.profileName
+        params.serverProfileConfig2Prof["server_serial"] = params.serverSerial[0]
+        params.serverProfileConfig2Prof["derive_name"] = f"{params.profileName}_derive"
+    else:
+        raise TestFail("Failed to fetch target details")
+
+
+def run_test():
+    """
+    Run test
+    """
+    params.sharedOrg = cli_data.get('sharedOrg', 'False')
+    if params.sharedOrg:
+        runtests_logger.subdebug(
+            "sars_server_shared_orgs_template_set2--: Creation resource group and regular organization --NOT RUN")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of shared organizations--NOT RUN")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of role and user --NOT RUN")
+
+        # Creation of resource group and organisation
+        try:
+            runtests_logger.info(f'Creating a resource group: {params.rgName}')
+            params.gui.page.navigate_to("Settings").select_setting('Resource Groups')
+            params.localRGConfig['name'] = params.rgName
+            params.localRGConfig['description'] = 'Only SARS'
+            params.localRGConfig["targets"] = [params.serverName]
+            params.gui.page.create(params.localRGConfig)
+
+            # create an regular org which is mapping to RG
+            runtests_logger.info("Creating another regular Org with resource group{}".format(params.org8Name))
+            params.gui.page.navigate_to("Settings").select_setting('Organizations')
+            params.localUsageOrgConfig["name"] = params.org8Name
+            params.localUsageOrgConfig["rgs_orgs_select"] = [params.rgName]
+            params.gui.page.create(params.localUsageOrgConfig)
+            runtests_logger.subdebug(
+                "sars_server_shared_orgs_template_set2--: Creation resource group and regular organization --PASS")
+        except Exception as excep:
+            excType, excValue, excTraceback = sys.exc_info()
+            runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+                traceback.format_exception(excType, excValue, excTraceback)))
+            runtests_logger.info(f"failed due to exception : {excep}")
+            runtests_logger.subdebug(
+                "sars_server_shared_orgs_template_set2--: Creation resource group and regular organization --FAIL")
+        try:
+            runtests_logger.info("Creating a shared Org {} which is going to shared with org8".format(params.org1Name))
+            params.localUsageOrgConfig["name"] = params.org1Name
+            params.localUsageOrgConfig['share_orgs'] = True
+            params.localUsageOrgConfig["rgs_orgs_select"] = [params.org8Name]
+            params.gui.page.create(params.localUsageOrgConfig)
+
+            runtests_logger.info("Creating a shared Org {} which is going to shared with org8".format(params.org2Name))
+            params.localUsageOrgConfig["name"] = params.org2Name
+            params.localUsageOrgConfig['share_orgs'] = True
+            params.localUsageOrgConfig["rgs_orgs_select"] = [params.org8Name]
+            params.gui.page.create(params.localUsageOrgConfig)
+
+            runtests_logger.info("Creating a shared Org {} which is going to shared with org8".format(params.org3Name))
+            params.localUsageOrgConfig["name"] = params.org3Name
+            params.localUsageOrgConfig['share_orgs'] = True
+            params.localUsageOrgConfig["rgs_orgs_select"] = [params.org8Name]
+            params.gui.page.create(params.localUsageOrgConfig)
+
+            runtests_logger.info("Creating a shared Org {} which is going to shared with org8".format(params.org4Name))
+            params.localUsageOrgConfig["name"] = params.org4Name
+            params.localUsageOrgConfig['share_orgs'] = True
+            params.localUsageOrgConfig["rgs_orgs_select"] = [params.org8Name]
+            params.gui.page.create(params.localUsageOrgConfig)
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of shared organizations--PASS")
+
+        except Exception as exceptionMsg:
+            excType, excValue, excTraceback = sys.exc_info()
+            runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+                traceback.format_exception(excType, excValue, excTraceback)))
+            runtests_logger.info(f"failed due to exception : {exceptionMsg}")
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of shared organizations--FAIL")
+        else:
+            runtests_logger.info("Create shared orgs org1,org2, org3 and org4 all shared with org8")
+
+        runtests_logger.info(
+            "===========================================================================================")
+
+        runtests_logger.info("Create permission {0} and add orgs {1}, {2}, {3}, {4}, {5}".format(
+            params.perm1Name, params.org1Name, params.org2Name, params.org3Name, params.org4Name, params.org8Name))
+
+        try:
+            params.gui.page.navigate_to("Settings").select_setting('Roles')
+            orgConfiguration = [{'organization': params.org1Name,
+                                'privileges': ["Server Administrator", "UCS Domain Administrator"]},
+                                {'organization': params.org2Name,
+                                'privileges': ["Server Administrator", "UCS Domain Administrator"]},
+                                {'organization': params.org3Name,
+                                'privileges': ["Server Administrator", "UCS Domain Administrator"]},
+                                {'organization': params.org4Name,
+                                'privileges': ["Server Administrator", "UCS Domain Administrator"]},
+                                {'organization': params.org8Name,
+                                'privileges': ["Server Administrator", "UCS Domain Administrator"]},
+                                ]
+            params.localRoleConfig['name'] = params.perm1Name
+            params.localRoleConfig['access_control'] = orgConfiguration
+            params.gui.page.create(params.localRoleConfig)
+
+            time.sleep(5)
+
+            runtests_logger.info(f"Creating a new user {params.account_user} and assign roles")
+            userConfig = {
+                "email": params.account_user,
+                "identity_provider": params.domainName,
+                "roles": [
+                    {"role": "Account Administrator"},
+                    {"role": "Read-Only"},
+                    {"role": params.perm1Name}]
+            }
+            params.gui.page.navigate_to("Settings").select_setting("Users")
+            params.gui.page.add_user().add(userConfig)
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of role and user --PASS")
+
+        except Exception as exceptionMsg:
+            excType, excValue, excTraceback = sys.exc_info()
+            runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+                traceback.format_exception(excType, excValue, excTraceback)))
+            runtests_logger.info(f"failed due to exception : {exceptionMsg}")
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2--: Creation of role and user --FAIL")
+        else:
+            runtests_logger.info("Created permission with org1 and org2".format(params.perm1Name))
+
+        runtests_logger.info(
+            "===========================================================================================")
+
+        runtests_logger.info(f"Login as new user {params.account_user} and create GUI handle")
+        try:
+            params.iamUserGUIHandle = IntersightGui(
+                url=params.host,
+                use_sso=True,
+                idp_email='abcd@' + params.idp_email,
+                username=params.account_user,
+                password=params.account_password,
+                account_name=params.accountName,
+                account_role=params.perm1Name,
+            )
+
+        except Exception as exceptionMsg:
+            raise TestFail(f"Failed to create GUI handle for account Admin user {params.accountName} with the above"
+                           f" parameters: {str(exceptionMsg)}")
+
+        params.localUserConfigPol['organization'] = params.org1Name
+        params.virtualMediaConfigPol['organization'] = params.org2Name
+        params.ldapConfigPol['organization'] = params.org3Name
+        params.deviceConnectorConfigPol['organization'] = params.org4Name
+        params.serverProfileConfig2Prof["organization"] = params.org8Name
+
+    else:
+        params.iamUserGUIHandle = params.gui
+
+    runtests_logger.subdebug("sars_server_shared_orgs_template_set2--SARS Policy Creation--NOT RUN")
+    runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Server Profile Template creation--NOT RUN")
+    runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Derived Profile Deployment--NOT RUN")
+    runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- SARS Edit Policies--NOTRUN")
+    runtests_logger.subdebug(
+        "sars_server_shared_orgs_template_set2-- SARS Profile Re-deployment after edited the policies--NOTRUN")
+
+    # Policy creation
+    try:
+        # navigate to policies page
+        params.iamUserGUIHandle.page.navigate_to("Policies")
+
+        # Local User policy
+        runtests_logger.info("Creating Local User policy")
+
+        params.iamUserGUIHandle.page.create_policy("Local User").create(params.localUserConfigPol)
+        runtests_logger.info("Successfully created local user policy\n")
+        params.policies.append(params.localUserConfigPol["name"])
+
+        # Verify Local User Policy
+        runtests_logger.info("Verifying Local User policy")
+        localUserDetails = params.iamUserGUIHandle.page.get_policy_details(name=params.localUserConfigPol['name'])
+        if localUserDetails['Description'] != params.localUserConfigPol['description']:
+            raise TestFail(
+                f"Failed to verify local user configuration from details page. "
+                f"Actual : {localUserDetails['Description']}, "
+                f"Expected : {params.localUserConfigPol['description']}")
+
+        # Virtual Media policy
+        runtests_logger.info("Creating Virtual Media policy")
+
+        params.iamUserGUIHandle.page.create_policy("Virtual Media").create(params.virtualMediaConfigPol)
+        runtests_logger.info("Successfully created virtual media policy\n")
+
+        # Ldap Policy
+        runtests_logger.info("Creating Ldap policy")
+
+        params.iamUserGUIHandle.page.create_policy("LDAP").create(params.ldapConfigPol)
+        runtests_logger.info("Successfully created Ldap Policy\n")
+        params.policies.append(params.ldapConfigPol["name"])
+
+        # Device Connector policy
+        runtests_logger.info("Creating Device Connector policy")
+
+        params.iamUserGUIHandle.page.create_policy("Device Connector").create(params.deviceConnectorConfigPol)
+        runtests_logger.info("Successfully Device Connector policy")
+        params.policies.append(params.deviceConnectorConfigPol["name"])
+
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2--SARS Policy Creation--PASS")
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Policy creation failed {exe}")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2--SARS Policy Creation--FAIL")
+
+    # Server Profile Template creation
+    try:
+        runtests_logger.info("Create and derive server profile template")
+
+        params.iamUserGUIHandle.page.navigate_to("Templates")
+        params.iamUserGUIHandle.select_ctx('Tabs').select('UCS Server Profile Templates')
+        params.iamUserGUIHandle.page.create_template(
+            "UCS Server Profile Templates").create(params.serverProfileConfig2Prof)
+
+        runtests_logger.info("Successfully created and derived server profile template")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Server Profile Template creation--PASS")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Server Profile Template creation failed {exe}")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Server Profile Template creation--FAIL")
+
+    # Derived profile deployment
+    try:
+        runtests_logger.info("Deploying the derived server profile")
+
+        params.iamUserGUIHandle.page.navigate_to("Profiles")
+        params.iamUserGUIHandle.page.deploy_profile(profile_type="UCS Server Profiles",
+                                                    filter_str=f"Name: eq '{params.profileName}_derive'")
+        params.profiles.append(f"{params.profileName}_derive")
+
+        # Verifying Server profile deployment workflow
+        # params.iamUserGUIHandle.select_ctx('icon:requests').select(True)
+        requestWorkflowStatus = params.iamUserGUIHandle.page._verify_deployment_request_status(
+            name='Deploy Server Profile', source_name=f"{params.profileName}_derive", target_name=params.serverName)
+
+        if requestWorkflowStatus == "Success":
+            runtests_logger.info("Successfully deployed the derived server profile")
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Derived Profile Deployment--PASS")
+        else:
+            runtests_logger.info(
+                f"Deploy server profile failed: deploy server profile wf status is {requestWorkflowStatus}, Expected : Success")
+            runtests_logger.info("Derived Profile deployment failed")
+            runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Derived Profile Deployment--FAIL")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Derived Server Profile deployment failed {exe}")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- Derived Profile Deployment--FAIL")
+
+    # Edit Policy
+    try:
+        # navigate to policies page
+        params.iamUserGUIHandle.page.navigate_to("Policies")
+
+        # Virtual Media policy
+        runtests_logger.info("Editing Virtual Media policy")
+        params.iamUserGUIHandle.page.edit_policy(
+            name=params.virtualMediaConfigPol['name']).edit(params.virtualMediaConfigEdit)
+        params.policies.append(params.virtualMediaConfigEdit["name"])
+        runtests_logger.info("Successfully edited virtual media policy\n")
+
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- SARS Edit Policies--PASS")
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"Policy creation failed {exe}")
+        runtests_logger.subdebug("sars_server_shared_orgs_template_set2-- SARS Edit Policies--FAIL")
+
+    # Re-Profile deployment
+    try:
+        time.sleep(20)
+        runtests_logger.info("Re-deploying the server profile")
+        params.iamUserGUIHandle.page.navigate_to("Profiles")
+        params.iamUserGUIHandle.page.deploy_profile(profile_type="UCS Server Profiles",
+                                                    filter_str=f"Name: eq '{params.profileName}_derive'")
+
+        # Verifying Server profile deployment workflow
+        requestWorkflowStatus = params.iamUserGUIHandle.page._verify_deployment_request_status(
+            name='Deploy Server Profile', source_name=params.profileName, target_name=params.serverName)
+
+        if requestWorkflowStatus == "Success":
+            runtests_logger.info("Successfully re-deployed the server profile after edited the policies")
+            runtests_logger.subdebug(
+                "sars_server_shared_orgs_template_set2-- SARS Profile Re-deployment after edited the policies--PASS")
+        else:
+            runtests_logger.info(
+                f"Deploy server profile failed: deploy server profile wf status is {requestWorkflowStatus}, Expected : Success")
+            runtests_logger.info("SARS Profile Re-deployment failed")
+            runtests_logger.subdebug(
+                "sars_server_shared_orgs_template_set2-- SARS Profile Re-deployment after edited the policies--FAIL")
+
+    except Exception as exe:
+        excType, excValue, excTraceback = sys.exc_info()
+        runtests_logger.error("sars_server_shared_orgs_template_set2 is failed with ".join(
+            traceback.format_exception(excType, excValue, excTraceback)))
+        runtests_logger.info(f"SARS Profile Re-deployment after edited the policies {exe}")
+        runtests_logger.subdebug(
+            "sars_server_shared_orgs_template_set2-- SARS Profile Re-deployment after edited the policies--FAIL")
+    if params.iamUserGUIHandle:
+        params.iamUserGUIHandle.quit()
+
+
+def test_cleanup():
+    """
+    Test cleanup -
+    """
+    # delete profile
+    utils.delete_profile(params.gui, runtests_logger, params.profiles)
+
+    # deleting template
+    filterStr = f"Name:{params.profileName}"
+    utils.deleteTemplate(params.gui, runtests_logger, filterStr)
+
+    # deleting policies
+
+    if params.policies:
+        params.gui.page.navigate_to("Policies")
+        for policy in params.policies:
+            params.gui.page.delete_policy(policy)
+
+    # deleting Organizations, role, users.
+    if params.sharedOrg:
+        try:
+            params.gui.page.navigate_to("Settings").select_setting('Users')
+            params.gui.page.delete_user(params.account_user)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Failed to remove Permission :{0} , error : {1}".format(
+                params.perm1Name, exceptionMsg))
+            runtests_logger.error("Deleting User failed")
+        try:
+            params.gui.page.navigate_to("Settings").select_setting('Roles')
+            params.gui.page.delete_roles(params.perm1Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting permission 1: {0}".format(exceptionMsg))
+
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(params.org1Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting org 1 : {0}".format(exceptionMsg))
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(params.org2Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting org 2 : {0}".format(exceptionMsg))
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(params.org3Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting org 3 : {0}".format(exceptionMsg))
+        try:
+            params.keyGrimoireAccountAdminUser.deleteSharedOrg(params.org4Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting org 4 : {0}".format(exceptionMsg))
+        try:
+            params.keyGrimoireAccountAdminUser.deleteOrgWithResource(orgName=params.org8Name)
+        except Exception as exceptionMsg:
+            runtests_logger.error("Error in deleting org 8 : {0}".format(exceptionMsg))
+
+    if params.gui:
+        params.gui.quit()

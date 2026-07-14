@@ -1,0 +1,48 @@
+"""
+This is a utility file for handling asset device data from Intersight.
+"""
+# pylint: disable=invalid-name
+import logging
+from utils.intersight_api import get_intersight_api_client
+from utils.constants import CLOUD_STAGING, USEAST_REGION, EMEA_REGION
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class AssetDeviceHandler:
+    """
+    A handler for fetching asset device data from Intersight.
+    """
+
+    def __init__(self):
+        """Initialize API clients for both US and EMEA regions."""
+        self.api_clients = []
+
+        for region in [USEAST_REGION, EMEA_REGION]:
+            client = get_intersight_api_client(cloud=CLOUD_STAGING, region=region)
+            if client:
+                self.api_clients.append(client)
+            else:
+                logger.error("Failed to initialize Intersight API client for %s", region)
+
+        if not self.api_clients:
+            raise ValueError("Failed to initialize any Intersight API client.")
+
+    def get_claimed_by_user(self, ip):
+        """
+        Fetches the claimed username for a device with the given IP address.
+        Iterates over all configured regions to find the claim information.
+        """
+        try:
+            for api_client in self.api_clients:
+                filter_query = f"contains(DeviceIpAddress,'{ip}') and (ConnectionStatus eq 'Connected')"
+                api_response = api_client.asset_device_registration_api.get(filter=filter_query)
+
+                if api_response and api_response.get("results"):
+                    return api_response["results"][0].get("claimed_by_user_name", "Unclaimed")
+
+        except Exception as exc:
+            logger.error("Error fetching ClaimedByUserName for %s: %s", ip, exc)
+
+        return "Unclaimed"

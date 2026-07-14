@@ -1,0 +1,128 @@
+{% extends 'crr_servers_inventory/base.html' %}
+
+{% block title %}Add Server | CRR Inventory{% endblock title %}
+
+{% block main_contant %}
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %}">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+<section class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Add New Entry</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{% url 'add-server' %}" method="POST">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <h5 class="font-weight-bold mb-3">Server Details</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="testbed" class="form-label">Testbed Name:</label>
+                                    {{ form.testbed }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="serial" class="form-label">Serial:</label>
+                                    {{ form.serial }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="management_ip" class="form-label">IP Address:</label>
+                                    {{ form.management_ip }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="fi_details" class="form-label">Fabric Interconnect Details(if na fill N/A):</label>
+                                    {{ form.fi_details }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="owner" class="form-label">Owner:</label>
+                                    {{ form.owner }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="server_pid" class="form-label">Server PID(if na fill N/A):</label>
+                                    {{ form.server_pid }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="chassis" class="form-label">Chassis(if na fill N/A):</label>
+                                    {{ form.chassis }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="storage_controllers" class="form-label">Storage Controllers(if na fill N/A):</label>
+                                    {{ form.storage_controllers }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="server_type" class="form-label">Device Type (if na fill N/A):</label>
+                                    {{ form.server_type }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="server_model" class="form-label">Device Model (if na fill N/A):</label>
+                                    {{ form.server_model }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="fex" class="form-label">FEX (if na fill N/A):</label>
+                                    {{ form.fex }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="host_ip" class="form-label">HOST IP (Only for Appliance):</label>
+                                    {{ form.host_ip }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="cimc_ip" class="form-label">CIMC IP (Only for Appliance & Vcenter):</label>
+                                    {{ form.cimc_ip }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="esxi_ip" class="form-label">ESXI IP (Only for Vcenter):</label>
+                                    {{ form.esxi_ip }}
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="location_details" class="form-label">Location Details (if na fill N/A):</label>
+                                    <textarea name="location_details" class="form-control" style="width: 100%; height: 80px;" placeholder="Enter Location Details...">{{ form.location_details.value|default_if_none:"" }}</textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="adapters_details" class="form-label">Adapters Details (if na fill N/A):</label>
+                                    <textarea name="adapters_details" class="form-control" style="width: 100%; height: 80px;" placeholder="Enter Adapters Details...">{{ form.adapters_details.value|default_if_none:"" }}</textarea>
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="details" class="form-label">Details (CPU & GPU etc.):</label>
+                                    {{ form.details }}
+                                </div>
+                            </div>
+                            <div class = "row mb-4" >
+                                <div class = "col-md-6" >
+                                     <label for = "hardware_code_name" class = "form-label">HW Code Name (if na fill N/A):</label>
+                                     <textarea name = "hardware_code_name" class = "form-control" style="width: 100%; height: 80px;" placeholder="Enter Hardware Code Name...">{{ form.hardware_code_name.value|default_if_none:"" }}</textarea>
+                                 </div >
+                             </div >
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg px-4">Submit</button>
+                            <a href="{% url 'home' %}" class="btn btn-secondary btn-lg ms-3">Back to List</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock main_contant %}

@@ -1,0 +1,108 @@
+"""
+Views file
+"""
+from django.shortcuts import render
+from django.views.generic import TemplateView
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from crr_summary.utils import get_and_transform_summary_data
+from crr_summary.models import ReportSummary
+import re
+import json
+
+# pylint: disable=invalid-name
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CRRSummaryView(TemplateView):
+    """
+        View for Diff tool
+    """
+    template_name = "crr_summary/crr_summary.html"
+
+    @csrf_exempt
+    def get(self, request):
+        """
+        Get method for the Summary view
+        """
+        # Get the values from the GET request
+        location_param = request.GET.get('location')
+        environment_param = request.GET.get('environment')
+        summaryData = get_and_transform_summary_data(environment_param, location_param)
+        return render(
+            request,
+            self.template_name,
+            {
+                'summaryData': summaryData,
+                'location_param': location_param,
+                'environment_param': environment_param,
+            })
+
+    @csrf_exempt
+    def post(self, request):
+        """
+        POst method for the Summary view
+        """
+        try:
+            updated_data = json.loads(request.body)
+            location_param = updated_data[0].get('location')
+            environment_param = updated_data[0].get('environment')
+            for row_data in updated_data:
+                year_week = row_data.get('year_week')  # Example: "2021-W45"
+                api_fail_reason = row_data['updated_re_run_reason'].get('api_fail_reason')
+                gui_fail_reason = row_data['updated_re_run_reason'].get('gui_fail_reason')
+
+                match = re.match(r"WK(\d+)_(\d+)", year_week)
+                if match:
+                    week = int(match.group(1))
+                    year = int(match.group(2))
+                is_imm = environment_param == "IMM"
+                location = ReportSummary.Location.USEAST if location_param == 'USEAST' else ReportSummary.Location.EMEA
+                ReportSummary.objects.filter(
+                    week=week,
+                    year=year,
+                    is_imm=is_imm,
+                    location=location,
+                ).update(
+                    api_fail_reason=api_fail_reason,
+                    gui_fail_reason=gui_fail_reason,
+                )
+            return JsonResponse({"success": True, "message": "Failure reasons updated successfully."})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "message": "Invalid JSON data."})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)})
+
+
+class CRRSummaryChartView(TemplateView):
+    """
+        View for CRR Summary Chart page
+    """
+    template_name = "crr_summary/crr_summary_chart.html"
+
+    @csrf_exempt
+    def get(self, request):
+        """
+        Get method for Summary Chart view
+        """
+        # Get the values from the GET request
+        location_param = request.GET.get('location', 'USEAST')
+        environment_param = request.GET.get('environment', 'IMM,NON_IMM')
+        category_param = request.GET.get('category', 'Total')
+        summaryData, summaryData1 = {}, {}
+        environments = []
+        if location_param and environment_param:
+            environments = environment_param.split(",")
+            summaryData = get_and_transform_summary_data(environments[0], location_param)
+        if len(environments) == 2:
+            summaryData1 = get_and_transform_summary_data(environments[1], location_param)
+        return render(request, self.template_name, {
+            'summaryData': summaryData,
+            'summaryData1': summaryData1,
+            'location_param': location_param,
+            'environment_param': environment_param,
+            'category_param': category_param,
+            'environments': environments,
+        })

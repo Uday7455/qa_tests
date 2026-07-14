@@ -1,0 +1,43 @@
+'''
+This is forms file
+'''
+# pylint: disable=invalid-name, line-too-long
+from django import forms
+from .models import Server
+
+
+class ServerForm(forms.ModelForm):
+    """
+    forms class for server-inventory 
+    """
+    class Meta:
+        """
+        model fields for server-inventory 
+        """
+        model = Server
+        fields = ('testbed', 'serial', 'management_ip', 'owner', 'claimed_to', 'fi_details',
+                  'location_details', 'server_type', 'adapters_details', 'server_model',
+                  'server_pid', 'chassis', 'fex', 'storage_controllers', 'details', 'esxi_ip', 'host_ip', 'cimc_ip', 'hardware_code_name')
+        widgets = {
+            'testbed': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'testbed Name'}),
+            'last_checked': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'serial': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Server Serial Number'}),
+            'management_ip': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Server IP Address'}),
+            'cimc_ip': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CIMC IP Address'}),
+            'host_ip': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'HOST IP Address'}),
+            'esxi_ip': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ESXI IP Address'}),
+            'owner': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Owner'}),
+            'claimed_to': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Claimed To'}),
+            'fi_details': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'FABRIC INTERCONNECT DETAILS'}),
+            'location_details': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Location Details'}),
+            #'adapters_details': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'adapters details'}),
+            'server_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'server type'}),
+            'server_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'server model'}),
+            'server_pid': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'server pid'}),
+            'chassis': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter Chassis'}),
+            'fex': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter Fex details', 'style': 'width: 100%;'}),
+            'storage_controllers': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter Storage Controllers'}),
+            'adapter_details': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter Adapters'}),
+            'details': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter details'}),
+            'hardware_code_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter HW Code Name'}),
+        }

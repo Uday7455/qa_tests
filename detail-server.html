@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Details</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 1rem;
+        }
+        .card-header {
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+        }
+        .tab-content {
+            border: 1px solid #dee2e6;
+            border-radius: 0 0 1rem 1rem;
+            padding: 1rem;
+        }
+        .badge-custom {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <section class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="card shadow-lg border-0 rounded">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-server me-2"></i>Server Information
+                        </h4>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6>Server Name:</h6>
+                                <p>{{ server.testbed }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Server Serial:</h6>
+                                <p>{{ server.serial }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Management IP Address:</h6>
+                                <p>{{ server.management_ip }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Claimed To:</h6>
+                                <p>{{ server.claimed_to }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Owner:</h6>
+                                <p>{{ server.owner }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Server PID:</h6>
+                                <p>{{ server.server_pid }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Chassis:</h6>
+                                <p>{{ server.chassis }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>FEX:</h6>
+                                <p>{{ server.fex }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Storage Controllers:</h6>
+                                <p>{{ server.storage_controllers }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>CIMC IP:</h6>
+                                <p>{{ server.cimc_ip }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>HOST IP:</h6>
+                                <p>{{ server.host_ip }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>ESXI IP:</h6>
+                                <p>{{ server.esxi_ip }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Server Type:</h6>
+                                <p>{{ server.server_type }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Server Model:</h6>
+                                <p>{{ server.server_model }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Health Status:</h6>
+                                <p>{{ server.health_status }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Last Update:</h6>
+                                <p>{{ server.last_checked }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>HW Code Name:</h6>
+                                <p>{{ server.hardware_code_name }}</p>
+                            </div>
+                        </div>
+                        <hr style="margin-top: 0; margin-bottom: 1rem;">
+
+                        <!-- Tabs for Hardware Details -->
+                        <ul class="nav nav-tabs mb-3" id="serverDetailsTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="fi-details-tab" data-bs-toggle="tab" data-bs-target="#fi-details" type="button" role="tab" aria-controls="fi-details" aria-selected="true">
+                                    Fabric Interconnect Details
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="location-details-tab" data-bs-toggle="tab" data-bs-target="#location-details" type="button" role="tab" aria-controls="location-details" aria-selected="false">
+                                    Location Details
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="adapters-tab" data-bs-toggle="tab" data-bs-target="#adapters" type="button" role="tab" aria-controls="adapters" aria-selected="false">
+                                    Adapters Details
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="serverDetailsTabContent">
+                            <div class="tab-pane fade show active" id="fi-details" role="tabpanel" aria-labelledby="fi-details-tab">
+                                <pre style="font-size: 0.9rem;">{{ server.fi_details }}</pre>
+                            </div>
+                            <div class="tab-pane fade" id="adapters" role="tabpanel" aria-labelledby="adapters-tab">
+                                <pre style="font-size: 0.9rem;">{{ server.adapters_details|linebreaks }}</pre>
+                            </div>
+                            <div class="tab-pane fade" id="location-details" role="tabpanel" aria-labelledby="location-details-tab">
+                                <pre style="font-size: 0.9rem;">{{ server.location_details|linebreaks }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-right bg-light">
+                        <a href="{% url 'edit-server' server.serial %}" class="btn btn-primary me-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form action="{% url 'delete-server' server.serial %}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this server?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger me-2">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                        <a href="{% url 'home' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function () {
+    $(".delete-btn").click(function () {
+        var serial = $(this).data("serial");
+        if (confirm("Are you sure you want to delete this server?")) {
+            $.ajax({
+                url: "/crr-servers-inventory/delete-server/" + serial + "/",
+                type: "POST",
+                dataType: "json",
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();  // Refresh the page after deletion
+                    } else {
+                        alert("Failed to delete the server.");
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+</html>

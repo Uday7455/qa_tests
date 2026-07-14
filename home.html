@@ -1,0 +1,700 @@
+{% extends 'home/base.html' %}
+{% load static %}
+{% block custom_style %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRR Inventory | Servers</title>
+    <link rel="stylesheet" href="{% static 'bootstrap-5.2.3-dist/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'breadcrumbs.css' %}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="{% static 'infra_vendors/font-awesome/css/font-awesome.min.css' %}">
+    <link rel="stylesheet"  href="{% static 'intersight_feedback/css/feedback_table.css' %}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <style>
+        .text-wrap {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 15ch;
+        }
+        .custom-tab {
+            color: whitesmoke;
+        }
+        .custom-tab.active {
+            font-weight: bold;
+            color: rgb(29, 53, 88);
+        }
+    </style>
+
+    <style>
+        a:visited {
+            text-decoration: none;
+        }
+    </style>
+    <style>
+        .text-wrap {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 15ch; /* Adjust this value for wider columns */
+        }
+    </style>
+    <style>
+        .custom-tab {
+            color: whitesmoke; /*nsures the text is white for all tabs */
+        }
+        .custom-tab.active {
+            font-weight: bold; /* Optional: Highlight the active tab */
+            color: rgb(29, 53, 88);
+        }
+    </style>
+{% endblock %}
+
+{% block navbar-breadcrumbs %}
+    <div class="breadcrumb-div">
+        <ol class="breadcrumb" style="margin: 0px;">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard_view' %}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">CRR Inventory</li>
+        </ol>
+    </div>
+{% endblock %}
+
+{% block main-content %}
+ <!-- Servers Table -->
+    <div class="container mt-1210"></div>
+     <ul class="nav nav-tabs" id="serverTab" role="tablist" style="background-color: rgb(29, 53, 88); color: white;">
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == '' %}active{% endif %}" data-bs-toggle="tab" href="#" role="tab" aria-controls="" aria-selected="false" onclick="updateFilter('')"></a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'SARS' %}active{% endif %}" data-bs-toggle="tab" href="#Sars" role="tab" aria-controls="Servers" aria-selected="false" onclick="updateFilter('SARS')">SARS</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'IMMSERVERS' %}active{% endif %}" data-bs-toggle="tab" href="#immServers" role="tab" aria-controls="immServers" aria-selected="false" onclick="updateFilter('IMMSERVERS')">IMM SERVERS</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'CHASSIS' %}active{% endif %}" data-bs-toggle="tab" href="#chassisServers" role="tab" aria-controls="chassisServers" aria-selected="false" onclick="updateFilter('CHASSIS')">CHASSIS</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'FI' %}active{% endif %}" data-bs-toggle="tab" href="#FIServers" role="tab" aria-controls="FIServers" aria-selected="false" onclick="updateFilter('FI')">FABRIC INTERCONNECTS</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'FEX' %}active{% endif %}" data-bs-toggle="tab" href="#FEXServers" role="tab" aria-controls="FEXServers" aria-selected="false" onclick="updateFilter('FEX')">FEX</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'APPLIANCE' %}active{% endif %}" data-bs-toggle="tab" href="#applianceServers" role="tab" aria-controls="applianceServers" aria-selected="false" onclick="updateFilter('APPLIANCE')">APPLIANCE</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'VIRTUALMACHINES' %}active{% endif %}" data-bs-toggle="tab" href="#virtualmachines" role="tab" aria-controls="virtualmachines" aria-selected="false" onclick="updateFilter('VIRTUALMACHINES')">VIRTUAL MACHINES</a></li>
+        <li class="nav-item"><a class="nav-link custom-tab {% if filter == 'VCENTER' %}active{% endif %}" data-bs-toggle="tab" href="#VCENTERServers" role="tab" aria-controls="VCENTERServers" aria-selected="false" onclick="updateFilter('VCENTER')">VCENTER</a></li>
+        <li class="nav-item"><a href="{% url 'add-server' %}" class="btn btn-success btn-md ms-4" role="button">+ Add New Entry</a></li>
+    </ul>
+     
+    <!-- Dropdown code -->
+    <div class="input-container mt-4">
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-tbname"> 
+                {% csrf_token %}
+                <label class="input-group-text" for="TBName">TB Name</label>
+                <input type="hidden" name="filter" value="{{ filter }}">
+                <select class = "form-select searchable-dropdown {% if TBName_param %}highlight-filter{% endif %}" id = "TBName" name = "TBName" onchange = "this.form.submit();" >   
+                    <option value="" {% if not TBName_param %}selected{% endif %} disabled>Select TBName</option>
+                    {% for tb_name in tb_names %}
+                        <option value="{{ tb_name }}" {% if TBName_param == tb_name %}selected{% endif %}>{{ tb_name }}</option>
+                    {% endfor %}
+                </select>    
+            </form>     
+        </div>
+        <!-- servermodel dropdown -->
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-model"> 
+                {% csrf_token %}
+                <label class="input-group-text" for="ServerModel">Models</label>
+                <input type = "hidden" name = "filter" value = "{{ filter }}" >
+                <select class = "form-select searchable-dropdown {% if ServerModel_param %}highlight-filter{% endif %}" id = "ServerModel" name = "ServerModel" onchange = "this.form.submit();" >
+                    <option value="" {% if not ServerModel_param %}selected{% endif %} disabled>Select ServerModel</option>
+                    {% for server_model in server_models %}
+                        <option value="{{ server_model }}" {% if ServerModel_param == server_model %}selected{% endif %}>{{ server_model }}</option>
+                    {% endfor %}
+                </select>
+            </form>     
+        </div>
+        <!-- <chassis dropdown-->
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-chassis">
+                {% csrf_token %}
+                <label class="input-group-text" for="Chassis">Chassis</label>
+                <input type = "hidden" name = "filter" value = "{{ filter }}" >
+                <select class = "form-select searchable-dropdown {% if Chassis_param %}highlight-filter{% endif %}" id = "Chassis" name = "Chassis" onchange = "this.form.submit();" >
+                    <option value="" {% if not Chassis_param %}selected{% endif %} disabled>Select Chassis</option>
+                    {% for chassis in chassis_list %}
+                        <option value="{{ chassis }}" {% if Chassis_param == chassis %}selected{% endif %}>{{ chassis }}</option>
+                    {% endfor %}
+                </select>
+            </form>    
+        </div>
+        <!-- <fex dropdown -->
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-fex">
+                {% csrf_token %}
+                <label class="input-group-text" for="Fex">Fex</label>
+                <input type = "hidden" name = "filter" value = "{{ filter }}" >
+                <select class = "form-select searchable-dropdown {% if Fex_param %}highlight-filter{% endif %}" id = "Fex" name = "Fex" onchange = "this.form.submit();" >
+                    <option value="" {% if not Fex_param %}selected{% endif %} disabled>Select Fex</option>
+                    {% for fex in fex_list %}
+                        <option value="{{ fex }}" {% if Fex_param == fex %}selected{% endif %}>{{ fex }}</option>
+                    {% endfor %}
+                </select>
+            </form>    
+        </div>
+        <!-- adapters -->
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-adapters">
+                {% csrf_token %}
+                <label class="input-group-text" for="Adapters">Adapters</label>
+                <input type = "hidden" name = "filter" value = "{{ filter }}" >
+                <select class = "form-select searchable-dropdown {% if Adapters_param %}highlight-filter{% endif %}" id = "Adapters" name = "Adapters" onchange = "this.form.submit();" >
+                    <option value="" {% if not Adapters_param %}selected{% endif %} disabled>Select Adapters</option>
+                    {% for adapters in adapters_list %}
+                        <option value="{{ adapters }}" {% if Adapters_param == adapters %}selected{% endif %}>{{ adapters }}</option>
+                    {% endfor %}
+                </select>
+            </form>    
+        </div>
+        <!-- <storage controller-->
+        <div class="input-group input-group-sm input-container-div">
+            <form method="get" action="{% url 'home' %}" id="filter-form-controller">
+                {% csrf_token %}
+                <label class="input-group-text" for="Storage_Controller">Storage Controllers</label>
+                <input type = "hidden" name = "filter" value = "{{ filter }}">
+                <select class = "form-select searchable-dropdown {% if Storage_Controller_param %}highlight-filter{% endif %}" id="Storage_Controller" name="Storage_Controller" onchange="this.form.submit();">
+                    <option value="" {% if not Storage_Controller_param %}selected{% endif %} disabled>Select Storage Controllers</option>
+                    {% for storage_controller in storage_controllers %}
+                        <option value="{{ storage_controller }}" {% if Storage_Controller_param == storage_controller %}selected{% endif %}>{{ storage_controller }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+            <!-- searchforminputbox -->
+        <form method="get" action="{% url 'home' %}" id="search-form">
+            {% csrf_token %}
+            <input type="text" name="q" id="search-input" placeholder="Search..." value="{{ query }}">
+            <input type="hidden" name="filter" id="filter-input" value="{{ filter }}">
+            <button type="submit" class="btn btn-primary ms-2">Search</button>
+        </form>
+
+        {% if TBName_param or ServerModel_param or Chassis_param or Fex_param or Adapters_param or Storage_Controller_param or query %}
+        <div class="mt-3 ms-3">
+            <strong>Active Filters:</strong>
+            {% if TBName_param %}
+                <span class="badge bg-primary">TBName: {{ TBName_param }}</span>
+            {% endif %}
+            {% if ServerModel_param and ServerModel_param %}
+                <span class="badge bg-success">Model: {{ ServerModel_param }}</span>
+            {% endif %}
+            {% if Chassis_param and Chassis_param %}
+                <span class="badge bg-warning text-dark">Chassis: {{ Chassis_param }}</span>
+            {% endif %}
+            {% if Fex_param and Fex_param %}
+                <span class="badge bg-info text-dark">FEX: {{ Fex_param }}</span>
+            {% endif %}
+            {% if Adapters_param and Adapters_param %}
+                <span class="badge bg-secondary">Adapters: {{ Adapters_param }}</span>
+            {% endif %}
+            {% if Storage_Controller_param and Storage_Controller_param %}
+                <span class="badge bg-dark">Storage: {{ Storage_Controller_param }}</span>
+            {% endif %}
+            {% if query %}
+                <span class="badge bg-danger">Search: {{ query }}</span>
+            {% endif %}
+            <a href="{% url 'home' %}" class="ms-2 btn btn-outline-secondary btn-sm">Clear All</a>
+        </div>
+        {% endif %}
+
+    </div>
+    
+        <!-- SARS Table -->
+    <div class="tab-content mt-3">
+        <div style="margin-left: 110px; width: 88%; text-align: center;">
+            {% if serdata|length > 0 and serdata.0.server_type == 'SARS' %}
+            <div class="table-responsive">
+                <table id="SarsTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                    <tr>
+                        <th>Sl. No</th>
+                        <th>TestBed</th>
+                        <th>Server IP</th>
+                        <th>Serial</th>
+                        <th>Server PID</th>
+                        <th>Adapters Info</th>
+                        <th>Storage Controllers</th>
+                        <th>Server State</th>
+                        <th>Claimed To</th>
+                        <th>Owner</th>
+                        <th>Details</th>
+                        <th>Hardware Code Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ser in serdata %}
+                        {% if ser.server_type == 'SARS' %}
+                            <tr class="server-row">
+                                <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                <td class="text-wrap" style="max-width: 15ch;">
+                                    <a href="{% url 'detail-server' ser.serial %}" class="" >{{ ser.testbed }}</a>
+                                </td>
+                                <td class="text-wrap" style="max-width: 15ch;">
+                                    <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                </td>
+                                <td class="text-wrap" style="max-width: 16ch;">
+                                    <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                </td>
+                                <td class="text-wrap" style="max-width: 15ch;">{{ ser.server_pid }}</td>
+                                <td class="text-wrap" style="max-width: 15ch;">{{ ser.adapters_details }}</td>
+                                <td class="text-wrap large-header" style="max-width: 15ch;">{{ ser.storage_controllers }}</td>
+                                <td>
+                                    {% if ser.health_status == 'Server Up' %}
+                                        <span class="badge bg-success badge-custom">{{ ser.health_status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger badge-custom">{{ ser.health_status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td>
+                                <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                <td class="text-wrap" style="max-width: 15ch;">{{ ser.hardware_code_name }}</td >
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+        <!-- IMM Servers -->
+        {% if serdata|length > 0 and serdata.0.server_type == 'IMMSERVERS' %}
+            <div class="table-responsive">
+                <table id="FIServersTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                        <tr>
+                            <th>Sl. No</th>
+                            <th>TestBed</th>
+                            <th>Serial</th>
+                            <th>Server PID</th>
+                            <th>Adapters Info</th>
+                            <th>Storage Controllers</th>
+                            <!-- <th>Claimed To</th> -->
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Hardware Code Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ser in serdata %}
+                            {% if ser.server_type == 'IMMSERVERS' %}
+                                <tr class="server-row">
+                                    <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 16ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.server_pid }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.adapters_details }}</td>
+                                    <td class="text-wrap large-header" style="max-width: 15ch;">{{ ser.storage_controllers }}</td>
+                                    <!-- <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td> -->
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.hardware_code_name }}</td >
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">No Servers found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+        {% endif %}
+        <!-- CHASSIS Servers -->
+        {% if serdata|length > 0 and serdata.0.server_type == 'CHASSIS' %}
+            <div class="table-responsive">
+                <table id="FIServersTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                        <tr>
+                            <th>Sl. No</th>
+                            <th>TestBed</th>
+                            <th>Serial</th>
+                            <th>Chassis PID</th>
+                            <!-- <th>Claimed To</th> -->
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Hardware Code Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ser in serdata %}
+                            {% if ser.server_type == 'CHASSIS' %}
+                                <tr class="server-row">
+                                    <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 16ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.server_pid }}</td>
+                                    <!-- <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td> -->
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.hardware_code_name }}</td >
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">No Chassis servers found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+        {% endif %}
+    <!-- FI Servers -->
+        {% if serdata|length > 0 and serdata.0.server_type == 'FI' %}
+            <div class="table-responsive">
+                <table id="FIServersTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                        <tr>
+                            <th>Sl. No</th>
+                            <th>TestBed</th>
+                            <th>Management IP</th>
+                            <th>Serial</th>
+                            <th>FI PID</th>
+                            <th>Server State</th>
+                            <th>Claimed To</th>
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Hardware Code Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ser in serdata %}
+                            {% if ser.server_type == 'FI' %}
+                                <tr class="server-row">
+                                    <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 16ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.server_pid }}</td>
+                                    <td>
+                                        {% if ser.health_status == 'Server Up' %}
+                                            <span class="badge bg-success badge-custom">{{ ser.health_status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger badge-custom">{{ ser.health_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.hardware_code_name }}</td >
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">No FI servers found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+        {% endif %}
+        <!-- FEX Servers -->
+            {% if serdata|length > 0 and serdata.0.server_type == 'FEX' %}
+            <div class="table-responsive">
+                <table id="FIServersTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                        <tr>
+                            <th>Sl. No</th>
+                            <th>TestBed</th>
+                            <th>Management IP</th>
+                            <th>Serial</th>
+                            <th>FI PID</th>
+                            <!-- <th>Claimed To</th> -->
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Hardware Code Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ser in serdata %}
+                            {% if ser.server_type == 'FEX' %}
+                                <tr class="server-row">
+                                    <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 16ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.server_pid }}</td>
+                                    <!-- <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td> -->
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.hardware_code_name }}</td >
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">No FI servers found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+        {% endif %}
+            
+        <!--APPLIANCE Servers -->
+            {% if serdata|length > 0 and serdata.0.server_type == 'APPLIANCE' %}
+            <div class="table-responsive">
+                <table id="FIServersTable" class="table table-striped table-bordered">
+                    <thead style="background-color: rgb(29, 53, 88); color: white;">
+                        <tr>
+                            <th>Sl. No</th>
+                            <th>TestBed</th>
+                            <th>Management IP</th>
+                            <th>ESXI IP</th>
+                            <th>HOST IP</th>
+                            <th>CIMC IP</th>
+                            <th>Server State</th>
+                            <th>Type</th>
+                            <th>Owner</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ser in serdata %}
+                            {% if ser.server_type == 'APPLIANCE' %}
+                                <tr class="server-row">
+                                    <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">
+                                        <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.esxi_ip }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.host_ip }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.cimc_ip }}</td>
+                                    <td>
+                                        {% if ser.health_status == 'Server Up' %}
+                                            <span class="badge bg-success badge-custom">{{ ser.health_status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger badge-custom">{{ ser.health_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-wrap" style="max-width: 6ch;">{{ ser.server_model }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                    <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">No Appliance servers found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+     <!--VMS Servers -->
+     {% if serdata|length > 0 and serdata.0.server_type == 'VIRTUALMACHINES' %}
+                <div class="table-responsive">
+                    <table id="FIServersTable" class="table table-striped table-bordered">
+                        <thead style="background-color: rgb(29, 53, 88); color: white;">
+                            <tr>
+                                <th>Sl. No</th>
+                                <th>TestBed</th>
+                                <th>Management IP</th>
+                                <th>Serial</th>
+                                <th>Server State</th>
+                                <th>Owner</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ser in serdata %}
+                                {% if ser.server_type == 'VIRTUALMACHINES' %}
+                                    <tr class="server-row">
+                                        <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                        <td class="text-wrap" style="max-width: 15ch;">
+                                            <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 15ch;">
+                                            <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 16ch;">
+                                            <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.serial }}</a>
+                                        </td>
+                                        <td>
+                                            {% if ser.health_status == 'Server Up' %}
+                                                <span class="badge bg-success badge-custom">{{ ser.health_status }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger badge-custom">{{ ser.health_status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted">No Virtual Machine servers found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        
+        <!-- VCENTER -->
+     {% if serdata|length > 0 and serdata.0.server_type == 'VCENTER' %}
+                <div class="table-responsive">
+                    <table id="FIServersTable" class="table table-striped table-bordered">
+                        <thead style="background-color: rgb(29, 53, 88); color: white;">
+                            <tr>
+                                <th>Sl. No</th>
+                                <th>TestBed</th>
+                                <th>Management IP</th>
+                                <th>HOST IP</th>
+                                <th>CIMC IP</th>
+                                <th>Server State</th>
+                                <th>Claimed To</th>
+                                <th>Owner</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ser in serdata %}
+                                {% if ser.server_type == 'VCENTER' %}
+                                    <tr class="server-row">
+                                        <th scope="row" class="serial-no">{{ forloop.counter }}</th>
+                                        <td class="text-wrap" style="max-width: 15ch;">
+                                            <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.testbed }}</a>
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 15ch;">
+                                            <a href="{% url 'detail-server' ser.serial %}" class="">{{ ser.management_ip }}</a>
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.host_ip }}</td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.cimc_ip }}</td>
+                                        <td>
+                                            {% if ser.health_status == 'Server Up' %}
+                                                <span class="badge bg-success badge-custom">{{ ser.health_status }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger badge-custom">{{ ser.health_status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 6ch;">{{ ser.claimed_to }}</td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.owner }}</td>
+                                        <td class="text-wrap" style="max-width: 15ch;">{{ ser.details }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted">No VCENTER servers found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        
+<!-- DataTables JavaScript -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.22/js/dataTables.bootstrap4.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        // Initialize DataTable for SARS Table
+        $('#SarsTable').DataTable({
+            "paging": true,
+            "lengthMenu": [10, 25, 50, 100],
+            "pageLength": 10,
+            "ordering": true,
+            "info": true,
+            "searching": true,
+            "autoWidth": false,
+            "responsive": true,
+            "dom": '<"top"l>rt<"bottom"ip><"clear">'
+        });
+        // Initialize DataTable for FI Servers Table
+        $('#FIServersTable').DataTable({
+            "paging": true,
+            "lengthMenu": [10, 25, 50, 100],
+            "pageLength": 10,
+            "ordering": true,
+            "info": true,
+            "searching": true,
+            "autoWidth": false,
+            "responsive": true,
+            "dom": '<"top"l>rt<"bottom"ip><"clear">'
+        });
+    });
+</script>
+                   
+<script>
+    // Update the filter value when a tab is clicked
+    function updateFilter(filterValue) {
+        document.getElementById('filter-input').value = filterValue;
+        document.getElementById('search-form').submit();
+    }
+    function filterServers(type) {
+        $('#serversTable tbody tr.server-row').each(function() {
+            if ($(this).data('type') == type || type === 'ALL') {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        updateSerialNumbers();
+    }
+    function updateSerialNumbers() {
+        let counter = 1;
+        $('#serversTable tbody tr:visible .serial-no').each(function() {
+            $(this).text(counter++);
+        });
+    }
+
+    $(document).ready(function() {
+        $('#serversTable').DataTable();
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize select2 on multiple elements
+        const selectElements = ['#TBName', '#ServerModel', '#Chassis', '#Fex', '#Adapters', '#Storage_Controller'];
+        const placeholderTexts = ["Select TB Name", "Select Server Model", "Select Chassis", "Select Fex", "Select Adapters", "Select Storage Controller"];
+        
+        selectElements.forEach((element, index) => {
+            $(element).select2({
+                placeholder: placeholderTexts[index],
+                allowClear: true
+            });
+        });
+    });
+</script>
+
+<style>
+    .highlight-filter {
+        background-color: #e7f1ff !important;
+        border: 2px solid #0d6efd !important;
+    }
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.5em 0.75em;
+        margin-right: 5px;
+    }
+</style>
+
+{% endblock %}

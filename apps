@@ -1,0 +1,12 @@
+'''
+This apps file
+'''
+from django.apps import AppConfig
+
+
+class CrrServersInventoryConfig(AppConfig):
+    """
+    Class Appconfig for servers inventory.
+    """
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'crr_servers_inventory'

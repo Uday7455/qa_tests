@@ -1,0 +1,223 @@
+"""
+This is the views file for the inventory dashboard.
+"""
+# pylint: disable=invalid-name
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.views.generic import View, TemplateView, FormView
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from intersight_insights.permissions import check_permissions
+from .forms import ServerForm
+from .models import Server
+
+
+class ServerManagement(View):
+    """
+    Server Management Views
+    """
+
+    def get(self, request, serial=None):
+        """
+        Handles GET requests. Routes to the appropriate method based on the URL.
+        """
+        if serial:
+            if 'detail-server' in request.path:
+                return self.detail_server(request, serial)
+            if 'edit-server' in request.path:
+                return self.edit_server(request, serial)
+            if 'delete-server' in request.path:
+                return self.delete_server(request, serial)
+        return self.list_servers(request)
+
+    #@check_permissions(["CRR_ENGINEERS"])
+    def list_servers(self, request):
+        """
+        List all servers with dropdown filters and search functionality.
+        """
+        active_tab = request.GET.get('filter', 'ALL')
+        server_data = self.get_filtered_servers(active_tab, request)
+
+        query = request.GET.get('q', '')
+        if query:
+            server_data = self.apply_search(server_data, query)
+
+        dropdown_data = self.get_dropdown_values(server_data)
+
+        return render(request, 'crr_servers_inventory/home.html', {
+            **dropdown_data,
+            'serdata': server_data,
+            'query': query,
+            'filter': active_tab,
+            **self.get_request_params(request)
+        })
+
+    def get_filtered_servers(self, active_tab, request):
+        """
+        Apply filters based on request parameters.
+        """
+        server_data = Server.objects.all()
+        if active_tab and active_tab != "ALL":
+            server_data = server_data.filter(server_type=active_tab)
+
+        filters = {
+            'testbed': request.GET.get('TBName'),
+            'server_model': request.GET.get('ServerModel'),
+            'chassis': request.GET.get('Chassis'),
+            'fex': request.GET.get('Fex'),
+            'adapters_details': request.GET.get('Adapters'),
+            'storage_controllers': request.GET.get('Storage_Controller'),
+        }
+
+        filter_query = Q()
+        for key, value in filters.items():
+            if value:
+                filter_query &= Q(**{f"{key}__icontains": value})  # Case-insensitive matching
+
+        return server_data.filter(filter_query)
+
+    def apply_search(self, server_data, query):
+        """
+        Apply search functionality.
+        """
+        search_fields = [
+            'testbed', 'fi_details', 'location_details', 'serial', 'management_ip',
+            'owner', 'health_status', 'reason', 'last_checked', 'server_type',
+            'adapters_details', 'server_model', 'claimed_to', 'server_pid',
+            'chassis', 'fex', 'storage_controllers', 'hardware_code_name', 'details'
+        ]
+        search_queries = Q()
+        for field in search_fields:
+            search_queries |= Q(**{f"{field}__icontains": query})
+
+        return server_data.filter(search_queries)
+
+    def get_dropdown_values(self, server_data):
+        """
+        Get distinct values for dropdowns after filtering.
+        """
+        return {
+            'tb_names': server_data.values_list('testbed', flat=True).distinct(),
+            'server_models': server_data.values_list('server_model', flat=True).distinct(),
+            'chassis_list': server_data.values_list('chassis', flat=True).distinct(),
+            'fex_list': server_data.values_list('fex', flat=True).distinct(),
+            'adapters_list': server_data.values_list('adapters_details', flat=True).distinct(),
+            'storage_controllers': server_data.values_list('storage_controllers',
+                                                           flat=True).distinct(),
+        }
+
+    def get_request_params(self, request):
+        """
+        Retrieve request parameters for filtering.
+        """
+        return {
+            'TBName_param': request.GET.get('TBName'),
+            'ServerModel_param': request.GET.get('ServerModel'),
+            'Chassis_param': request.GET.get('Chassis'),
+            'Fex_param': request.GET.get('Fex'),
+            'Adapters_param': request.GET.get('Adapters'),
+            'Storage_Controller_param': request.GET.get('Storage_Controller'),
+        }
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Handles csrf token
+        """
+        return super().dispatch(request, *args, **kwargs)
+
+    def edit_server(self, request, serial):
+        """
+        View to edit server details.
+        """
+        server = get_object_or_404(Server, serial=serial)
+        if request.method == 'POST':
+            form = ServerForm(request.POST, instance=server)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Server Updated successfully.")
+                return redirect('edit-server')  # redirection
+
+            # else:
+            messages.success(request, "Failed to update server.")
+            return redirect('edit-server')  # redirection
+
+        form = ServerForm(instance=server)
+        return render(request, 'crr_servers_inventory/edit-server.html',
+                      {'form': form, 'server': server})
+
+    def post(self, request, serial=None):
+        """
+        Handles POST requests for different actions (edit, delete, etc.)
+        """
+        if 'edit-server' in request.path:
+            return self.edit_server(request, serial)
+        if 'delete-server' in request.path:
+            return self.delete_server(request, serial)
+
+        return JsonResponse({'error': 'POST method not allowed for this URL.'}, status=405)
+
+    def detail_server(self, request, serial):
+        """
+        View to display server details.
+        """
+        server = get_object_or_404(Server, serial=serial)
+        return render(request, 'crr_servers_inventory/detail_server.html', {'server': server})
+
+    @check_permissions(["CRR"])
+    def delete_server(self, request, serial):
+        """
+        Deleting a server from the dashboard.
+        """
+        server = get_object_or_404(Server, serial=serial)
+        if request.method == "POST":
+            server.delete()
+            messages.success(request, "Server deleted successfully.")
+            return redirect('delete-server')  # redirection
+        return JsonResponse({'success': False, 'message': "Invalid request method."}, status=400)
+
+
+class AddServer(FormView):
+    """
+    View to add a new server entry.
+    """
+    template_name = 'crr_servers_inventory/add-server.html'
+    form_class = ServerForm
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Handles csrf token
+        """
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """
+        Save the form if valid.
+        """
+        form.save()
+        messages.success(self.request, "Server added successfully!")
+        return redirect('add-server')
+
+    def form_invalid(self, form):
+        """
+        Handle invalid forms.
+        """
+        messages.error(self.request, "Error adding server. Please check the form.")
+        return super().form_invalid(form)
+
+
+class ServerStatusView(TemplateView):
+    """
+    View to render server statuses on the dashboard.
+    """
+    template_name = 'crr_servers_inventory/home.html'
+
+    def get(self, request):
+        """
+        Retrieve server statuses.
+        """
+        server_statuses = Server.objects.all()
+        return render(request, self.template_name, {'server_statuses': server_statuses})
